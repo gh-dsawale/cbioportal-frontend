@@ -61,6 +61,7 @@ import {
     showOriginStudiesInSummaryDescription,
     statusFilterActive,
     StudyViewFilterWithSampleIdentifierFilters,
+    submitToPage,
     toFixedDigit,
     transformSampleDataToSelectedSampleClinicalData,
     updateCustomIntervalFilter,
@@ -4616,6 +4617,63 @@ describe('StudyViewUtils', () => {
                         },
                     ],
                 } as any
+            );
+        });
+    });
+
+    describe('submitToPage', () => {
+        const sandbox = sinon.createSandbox();
+
+        afterEach(() => {
+            sandbox.restore();
+            localStorage.removeItem('legacyStudySubmission');
+        });
+
+        it('submits Study View results queries using a POST form', () => {
+            const formSubmitStub = sandbox.stub(
+                HTMLFormElement.prototype,
+                'submit'
+            );
+            const windowOpenStub = sandbox.stub(window, 'open');
+
+            submitToPage(
+                '/results',
+                {
+                    Action: 'Submit',
+                    case_set_id: '-1',
+                    case_ids: 'study:sample1+study:sample2',
+                    gene_list: 'TP53',
+                },
+                '_blank'
+            );
+
+            assert.isTrue(formSubmitStub.calledOnce);
+            assert.isTrue(windowOpenStub.notCalled);
+
+            const submittedForm = formSubmitStub
+                .thisValues[0] as HTMLFormElement;
+            assert.equal(submittedForm.method.toLowerCase(), 'post');
+            assert.equal(new URL(submittedForm.action).pathname, '/results');
+            assert.equal(submittedForm.target, '_blank');
+            assert.isNull(submittedForm.parentElement);
+        });
+
+        it('keeps localStorage submission flow for non-results routes', () => {
+            const windowOpenStub = sandbox.stub(window, 'open');
+            const formSubmitStub = sandbox.stub(
+                HTMLFormElement.prototype,
+                'submit'
+            );
+
+            submitToPage('/', {
+                case_set_id: 'all',
+            });
+
+            assert.isTrue(formSubmitStub.notCalled);
+            assert.isTrue(windowOpenStub.calledOnce);
+            assert.equal(
+                localStorage.getItem('legacyStudySubmission'),
+                JSON.stringify({ case_set_id: 'all' })
             );
         });
     });

@@ -2746,6 +2746,41 @@ export function submitToPage(
     params: { [id: string]: string },
     target?: string
 ) {
+    const isResultsSubmission =
+        url === '/results' && params.Action === 'Submit';
+
+    if (isResultsSubmission) {
+        let form: HTMLFormElement | undefined;
+        try {
+            form = document.createElement('form');
+            form.method = 'post';
+            form.action = buildCBioPortalPageUrl(url);
+            if (target) {
+                form.target = target;
+            }
+            form.style.display = 'none';
+
+            const postForm = form;
+            _.forEach(params, (value, key) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                postForm.appendChild(input);
+            });
+
+            document.body.appendChild(postForm);
+            postForm.submit();
+            return;
+        } catch (e) {
+            // Fallback to legacy localStorage submission flow below.
+        } finally {
+            if (form && form.parentElement) {
+                document.body.removeChild(form);
+            }
+        }
+    }
+
     try {
         window.localStorage.setItem(
             'legacyStudySubmission',
