@@ -1,7 +1,7 @@
 {
   "name": "cbioportal-frontend",
   "private": true,
-  "version": "3.3.302",
+  "version": "6.4.1-large-query-support",
   "workspaces": {
     "packages": [
       ".",
