@@ -5,7 +5,7 @@
 
     <groupId>io.github.cbioportal</groupId>
     <artifactId>frontend-cbioportal</artifactId>
-    <version>0.3.0</version>
+    <version>6.4.1-large-query-support</version>
     <packaging>jar</packaging>
 
     <!-- Maven Central Requirements -->
