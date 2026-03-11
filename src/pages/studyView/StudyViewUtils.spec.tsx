@@ -102,6 +102,7 @@ import { autorun, observable, runInAction } from 'mobx';
 
 import { AlterationTypeConstants, DataTypeConstants } from 'shared/constants';
 import { SingleGeneQuery } from 'shared/lib/oql/oql-parser';
+import { buildCBioPortalPageUrl } from 'shared/api/urls';
 import {
     oqlQueryToStructVarGenePair,
     updateStructuralVariantQuery,
@@ -4629,12 +4630,11 @@ describe('StudyViewUtils', () => {
             localStorage.removeItem('legacyStudySubmission');
         });
 
-        it('submits Study View results queries using a POST form', () => {
-            const formSubmitStub = sandbox.stub(
-                HTMLFormElement.prototype,
-                'submit'
-            );
-            const windowOpenStub = sandbox.stub(window, 'open');
+        it('submits Study View results queries using clientPostedData handoff', () => {
+            const openedWindow: any = {};
+            const windowOpenStub = sandbox
+                .stub(window, 'open')
+                .returns(openedWindow as Window);
 
             submitToPage(
                 '/results',
@@ -4647,29 +4647,55 @@ describe('StudyViewUtils', () => {
                 '_blank'
             );
 
-            assert.isTrue(formSubmitStub.calledOnce);
-            assert.isTrue(windowOpenStub.notCalled);
+            assert.isTrue(windowOpenStub.calledOnce);
+            assert.equal(
+                windowOpenStub.firstCall.args[0],
+                buildCBioPortalPageUrl('/results')
+            );
+            assert.equal(windowOpenStub.firstCall.args[1], '_blank');
+            assert.deepEqual(openedWindow.clientPostedData, {
+                Action: 'Submit',
+                case_set_id: '-1',
+                case_ids: 'study:sample1+study:sample2',
+                gene_list: 'TP53',
+            });
+            assert.isNull(localStorage.getItem('legacyStudySubmission'));
+        });
 
-            const submittedForm = formSubmitStub
-                .thisValues[0] as HTMLFormElement;
-            assert.equal(submittedForm.method.toLowerCase(), 'post');
-            assert.equal(new URL(submittedForm.action).pathname, '/results');
-            assert.equal(submittedForm.target, '_blank');
-            assert.isNull(submittedForm.parentElement);
+        it('falls back to localStorage submission when popup is blocked', () => {
+            const windowOpenStub = sandbox
+                .stub(window, 'open')
+                .onFirstCall()
+                .returns(null)
+                .onSecondCall()
+                .returns({} as Window);
+
+            submitToPage('/results', {
+                Action: 'Submit',
+                case_set_id: '-1',
+                case_ids: 'study:sample1+study:sample2',
+                gene_list: 'TP53',
+            });
+
+            assert.equal(windowOpenStub.callCount, 2);
+            assert.equal(
+                localStorage.getItem('legacyStudySubmission'),
+                JSON.stringify({
+                    Action: 'Submit',
+                    case_set_id: '-1',
+                    case_ids: 'study:sample1+study:sample2',
+                    gene_list: 'TP53',
+                })
+            );
         });
 
         it('keeps localStorage submission flow for non-results routes', () => {
             const windowOpenStub = sandbox.stub(window, 'open');
-            const formSubmitStub = sandbox.stub(
-                HTMLFormElement.prototype,
-                'submit'
-            );
 
             submitToPage('/', {
                 case_set_id: 'all',
             });
 
-            assert.isTrue(formSubmitStub.notCalled);
             assert.isTrue(windowOpenStub.calledOnce);
             assert.equal(
                 localStorage.getItem('legacyStudySubmission'),

@@ -154,6 +154,7 @@ import ClinicalDataCache, {
 } from '../../shared/cache/ClinicalDataCache';
 import { getDefaultMolecularProfiles } from '../../shared/lib/getDefaultMolecularProfiles';
 import {
+    extractStudyIdsFromCaseIds,
     parseSamplesSpecifications,
     populateSampleSpecificationsFromVirtualStudies,
     ResultsViewTab,
@@ -528,7 +529,12 @@ export class ResultsViewPageStore extends AnalysisStore
 
     @computed
     get cancerStudyIds() {
-        return this.urlWrapper.query.cancer_study_list.split(',');
+        const cancerStudyList = this.urlWrapper.query.cancer_study_list;
+        if (cancerStudyList && cancerStudyList.trim().length > 0) {
+            return cancerStudyList.split(',');
+        }
+
+        return extractStudyIdsFromCaseIds(this.urlWrapper.query.case_ids);
     }
     @computed
     get cancerStudyListSorted() {
@@ -4259,6 +4265,9 @@ export class ResultsViewPageStore extends AnalysisStore
         {
             await: () => [this.studyIds],
             invoke: async () => {
+                if (_.isEmpty(this.studyIds.result)) {
+                    return [];
+                }
                 return getClient().fetchStudiesUsingPOST({
                     studyIds: this.studyIds.result!,
                     projection: REQUEST_ARG_ENUM.PROJECTION_DETAILED,

@@ -224,6 +224,29 @@ export function parseSamplesSpecifications(
     return samplesSpecifications;
 }
 
+export function extractStudyIdsFromCaseIds(case_ids?: string): string[] {
+    if (!case_ids) {
+        return [];
+    }
+
+    const studyIds: string[] = [];
+    const studyIdSet: { [studyId: string]: boolean } = {};
+
+    for (const caseId of case_ids.split(/\+|\s+/)) {
+        const item = caseId.trim();
+        if (!item) {
+            continue;
+        }
+        const studyId = item.split(':')[0];
+        if (studyId && !studyIdSet[studyId]) {
+            studyIdSet[studyId] = true;
+            studyIds.push(studyId);
+        }
+    }
+
+    return studyIds;
+}
+
 export function addGenesToQuery(
     urlWrapper: ResultsViewURLWrapper,
     selectedGenes: string[],

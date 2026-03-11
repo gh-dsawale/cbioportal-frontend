@@ -75,7 +75,10 @@ import { toQueryString } from 'shared/lib/query/textQueryUtils';
 import { SearchClause } from 'shared/components/query/filteredSearch/SearchClause';
 import { QueryParser } from 'shared/lib/query/QueryParser';
 import { AppStore } from 'AppStore';
-import { ResultsViewTab } from 'pages/resultsView/ResultsViewPageHelpers';
+import {
+    extractStudyIdsFromCaseIds,
+    ResultsViewTab,
+} from 'pages/resultsView/ResultsViewPageHelpers';
 import { CaseSetId } from 'shared/components/query/CaseSetSelectorUtils';
 
 // interface for communicating
@@ -2269,14 +2272,13 @@ export class QueryStore {
             }
         }
 
-        if (legacySubmission.cancer_study_list) {
-            for (const studyId of legacySubmission.cancer_study_list.split(
-                ','
-            )) {
-                if (studyId !== 'null') {
-                    this.setStudyIdSelected(studyId, true);
-                    this._defaultSelectedIds.set(studyId, true);
-                }
+        const studyIds = legacySubmission.cancer_study_list
+            ? legacySubmission.cancer_study_list.split(',')
+            : extractStudyIdsFromCaseIds(legacySubmission.case_ids);
+        for (const studyId of studyIds) {
+            if (studyId !== 'null') {
+                this.setStudyIdSelected(studyId, true);
+                this._defaultSelectedIds.set(studyId, true);
             }
         }
     }

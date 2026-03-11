@@ -30,6 +30,10 @@ describe('QueryStore', () => {
             store = new QueryStore();
         });
 
+        afterEach(() => {
+            initializeStub.restore();
+        });
+
         it('given custom case list, sets store and flags appropriately', () => {
             assert.isFalse(store.initiallySelected.profileIds);
             assert.isFalse(store.initiallySelected.sampleListId);
@@ -40,6 +44,15 @@ describe('QueryStore', () => {
             assert.equal(store.caseIds, 'sample1:study\nsample2:study');
             assert.isTrue(store.initiallySelected.sampleListId);
             assert.equal(store.selectedSampleListId, '-1');
+        });
+
+        it('derives studies from case_ids when cancer_study_list is missing', () => {
+            store.setParamsFromLocalStorage({
+                case_set_id: '-1',
+                case_ids: 'study1:sample1+study2:sample2+study1:sample3',
+            } as Partial<CancerStudyQueryUrlParams>);
+
+            assert.sameMembers(store.allSelectedStudyIds, ['study1', 'study2']);
         });
     });
 

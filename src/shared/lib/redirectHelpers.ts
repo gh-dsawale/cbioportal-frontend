@@ -9,6 +9,30 @@ import { ServerConfigHelpers } from 'config/config';
 import { CategorizedConfigItems } from 'config/IAppConfig';
 import _ from 'lodash';
 import client from 'shared/api/cbioportalClientInstance';
+import { extractStudyIdsFromCaseIds } from 'pages/resultsView/ResultsViewPageHelpers';
+
+type SubmissionWithStudyList = {
+    Action?: string;
+    cancer_study_list?: string;
+    case_ids?: string;
+    [key: string]: any;
+};
+
+type NormalizedSubmissionWithStudyList = SubmissionWithStudyList & {
+    cancer_study_list?: string;
+};
+
+function normalizeSubmissionStudyList(
+    submission: SubmissionWithStudyList
+): NormalizedSubmissionWithStudyList {
+    if (!submission.cancer_study_list) {
+        const studyIds = extractStudyIdsFromCaseIds(submission.case_ids);
+        if (studyIds.length > 0) {
+            submission.cancer_study_list = studyIds.join(',');
+        }
+    }
+    return submission as NormalizedSubmissionWithStudyList;
+}
 
 export function restoreRouteAfterRedirect(injected: {
     routing: ExtendedRouterStore;
@@ -34,24 +58,56 @@ export function restoreRouteAfterRedirect(injected: {
 // harvest query data written to the page by JSP (or assigned by parent window) to support queries originating
 // from external posts
 export function handlePostedSubmission(urlWrapper: ResultsViewURLWrapper) {
-    if (getBrowserWindow().postData || getBrowserWindow().clientPostedData) {
-        urlWrapper.updateURL(
-            getBrowserWindow().postData || getBrowserWindow().clientPostedData,
-            'results',
-            true,
-            true
+    const tryUpdateFromPostedData = () => {
+        if (
+            !getBrowserWindow().postData &&
+            !getBrowserWindow().clientPostedData
+        ) {
+            return false;
+        }
+
+        const parsedSubmission = normalizeSubmissionStudyList(
+            getBrowserWindow().postData || getBrowserWindow().clientPostedData
         );
+        urlWrapper.updateURL(parsedSubmission, 'results', true, true);
         // we don't want this data to be around anymore once we've tranferred it to URL
         getBrowserWindow().postData = null;
         getBrowserWindow().clientPostedData = null;
+        return true;
+    };
+
+    if (tryUpdateFromPostedData()) {
+        return;
     }
+
+    const hasQueryContext =
+        !!urlWrapper.query.gene_list ||
+        !!urlWrapper.query.cancer_study_list ||
+        !!urlWrapper.query.case_ids ||
+        !!urlWrapper.query.case_set_id;
+    if (hasQueryContext) {
+        return;
+    }
+
+    // Study View may attach clientPostedData a few ticks after /results initializes.
+    // Retry briefly to prevent dropping submissions due to timing.
+    let retries = 0;
+    const maxRetries = 20;
+    const retryTimer = getBrowserWindow().setInterval(() => {
+        retries += 1;
+        if (tryUpdateFromPostedData() || retries >= maxRetries) {
+            getBrowserWindow().clearInterval(retryTimer);
+        }
+    }, 50);
 }
 
 export function handleLegacySubmission(urlWrapper: ResultsViewURLWrapper) {
     const legacySubmission = localStorage.getItem('legacyStudySubmission');
     localStorage.removeItem('legacyStudySubmission');
     if (legacySubmission) {
-        const parsedSubmission: any = JSON.parse(legacySubmission);
+        const parsedSubmission: any = normalizeSubmissionStudyList(
+            JSON.parse(legacySubmission)
+        );
         if (parsedSubmission.Action) {
             urlWrapper.updateURL(parsedSubmission, 'results');
         }

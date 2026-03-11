@@ -2750,34 +2750,31 @@ export function submitToPage(
         url === '/results' && params.Action === 'Submit';
 
     if (isResultsSubmission) {
-        let form: HTMLFormElement | undefined;
         try {
-            form = document.createElement('form');
-            form.method = 'post';
-            form.action = buildCBioPortalPageUrl(url);
-            if (target) {
-                form.target = target;
+            const targetWindow = window.open(
+                buildCBioPortalPageUrl(url),
+                target
+            ) as
+                | (Window & {
+                      clientPostedData?: { [id: string]: string };
+                  })
+                | null;
+
+            if (targetWindow) {
+                targetWindow.clientPostedData = params;
+                // Navigation timing differs by browser; retry to ensure payload lands
+                // on the final /results window object.
+                [0, 50, 200].forEach(timeout => {
+                    window.setTimeout(() => {
+                        try {
+                            targetWindow.clientPostedData = params;
+                        } catch (e) {}
+                    }, timeout);
+                });
+                return;
             }
-            form.style.display = 'none';
-
-            const postForm = form;
-            _.forEach(params, (value, key) => {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = value;
-                postForm.appendChild(input);
-            });
-
-            document.body.appendChild(postForm);
-            postForm.submit();
-            return;
         } catch (e) {
             // Fallback to legacy localStorage submission flow below.
-        } finally {
-            if (form && form.parentElement) {
-                document.body.removeChild(form);
-            }
         }
     }
 

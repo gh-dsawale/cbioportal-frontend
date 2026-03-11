@@ -1,5 +1,6 @@
 import { assert } from 'chai';
 import {
+    extractStudyIdsFromCaseIds,
     getTabId,
     getSubTabId,
     parseSamplesSpecifications,
@@ -137,6 +138,29 @@ describe('ResultsViewPageHelpers', () => {
 
             // @ts-ignore
             assert.deepEqual(ret, expectedResult);
+        });
+    });
+
+    describe('extractStudyIdsFromCaseIds', () => {
+        it('returns unique study IDs when case IDs are + delimited', () => {
+            const studyIds = extractStudyIdsFromCaseIds(
+                'study1:sample1+study1:sample2+study2:sample3'
+            );
+
+            assert.deepEqual(studyIds, ['study1', 'study2']);
+        });
+
+        it('returns unique study IDs when case IDs are newline delimited', () => {
+            const studyIds = extractStudyIdsFromCaseIds(
+                'study1:sample1\nstudy2:sample2\nstudy1:sample3'
+            );
+
+            assert.deepEqual(studyIds, ['study1', 'study2']);
+        });
+
+        it('returns empty array for empty input', () => {
+            assert.deepEqual(extractStudyIdsFromCaseIds(undefined), []);
+            assert.deepEqual(extractStudyIdsFromCaseIds(''), []);
         });
     });
 });
