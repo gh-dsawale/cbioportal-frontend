@@ -9609,6 +9609,7 @@ export class StudyViewPageStore
                 } as any;
             });
         },
+        onError: () => Promise.resolve([]),
         default: [],
     });
 
@@ -9634,6 +9635,8 @@ export class StudyViewPageStore
                 } as any;
             });
         },
+        onError: () => Promise.resolve([]),
+        default: [],
     });
 
     readonly molecularProfileSampleCountSet = remoteData({
@@ -9662,6 +9665,7 @@ export class StudyViewPageStore
                 }
             );
         },
+        onError: () => Promise.resolve([]),
         default: [],
     });
 
@@ -10478,6 +10482,8 @@ export class StudyViewPageStore
                 studyViewFilter: this.filters,
             });
         },
+        onError: () => Promise.resolve([]),
+        default: [],
     });
 
     // Poll ClinicalEventTypeCounts API  with no filter to determine if table should be added to StudyView Page
@@ -10496,6 +10502,8 @@ export class StudyViewPageStore
                 ).length > 0
             );
         },
+        onError: () => Promise.resolve(false),
+        default: false,
     });
 
     @action.bound

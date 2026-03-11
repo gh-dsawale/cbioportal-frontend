@@ -380,6 +380,23 @@ export default class URLWrapper<
                             false,
                             true // we don't want pending to show up in history
                         );
+                    }),
+                    action(() => {
+                        if (timeStamp !== this.localSessionData?.timeStamp) {
+                            return;
+                        }
+
+                        // Fallback when remote session persistence fails.
+                        // Keep session props in-memory so the current page can proceed
+                        // without being stuck at session_id=pending.
+                        const fallbackSessionId = `local-${timeStamp}`;
+                        this.localSessionData!.id = fallbackSessionId;
+                        this.updateRoute(
+                            { session_id: fallbackSessionId },
+                            path,
+                            false,
+                            true
+                        );
                     })
                 );
             } else {
